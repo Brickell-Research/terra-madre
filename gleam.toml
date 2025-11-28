@@ -1,0 +1,15 @@
+name = "terra_madre"
+version = "0.1.0"
+licence = "MIT"
+description = "A Gleam library"
+
+[repository]
+type = "github"
+user = "Brickell-Research"
+repo = "terra-madre"
+
+[dependencies]
+gleam_stdlib = ">= 0.54.0 and < 2.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
