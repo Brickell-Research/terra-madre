@@ -1,0 +1,41 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [erlang, javascript]
+    name: Test on ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "latest"
+          gleam-version: "latest"
+          rebar3-version: "latest"
+
+      - uses: denoland/setup-deno@v2
+        if: matrix.target == 'javascript'
+        with:
+          deno-version: v2.x
+
+      - name: Install npm dependencies
+        if: matrix.target == 'javascript'
+        run: deno install
+
+      - name: Prepare
+        run: gleam deps download
+
+      - name: Test on ${{ matrix.target }}
+        run: gleam test --target ${{ matrix.target }}
+
+      - name: Check formatting
+        if: matrix.target == 'erlang'
+        run: gleam format --check src test
