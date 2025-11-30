@@ -14,11 +14,6 @@ pub fn main() {
 // ============================================================================
 // Expression Tests
 // ============================================================================
-
-fn encode_decode_expression(encode: fn(String) -> a, decode: fn(a) -> String) {
-  let encode(val) = decode(val)
-}
-
 pub fn string_literal_test() {
   let hcl.StringLiteral(val) = hcl.StringLiteral("hello")
   val |> should.equal("hello")
@@ -46,9 +41,10 @@ pub fn ref_two_parts_test() {
 
 pub fn ref_three_parts_test() {
   hcl.ref("aws_instance.web.public_ip")
-  |> should.equal(
-    hcl.GetAttr(hcl.GetAttr(hcl.Identifier("aws_instance"), "web"), "public_ip"),
-  )
+  |> should.equal(hcl.GetAttr(
+    hcl.GetAttr(hcl.Identifier("aws_instance"), "web"),
+    "public_ip",
+  ))
 }
 
 pub fn list_expr_test() {
