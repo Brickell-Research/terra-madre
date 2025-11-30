@@ -2,6 +2,7 @@ name = "terra_madre"
 version = "0.0.1"
 licence = "MIT"
 description = "A Gleam library"
+licences = ["MIT"]
 
 [repository]
 type = "github"
