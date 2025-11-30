@@ -70,11 +70,13 @@ pub fn list_expr_test() {
       hcl.StringLiteral("c"),
     ])
   case expr {
-    hcl.ListExpr(items) -> items |> should.equal([
-      hcl.StringLiteral("a"),
-      hcl.StringLiteral("b"),
-      hcl.StringLiteral("c"),
-    ])
+    hcl.ListExpr(items) ->
+      items
+      |> should.equal([
+        hcl.StringLiteral("a"),
+        hcl.StringLiteral("b"),
+        hcl.StringLiteral("c"),
+      ])
     _ -> should.fail()
   }
 }
@@ -98,8 +100,7 @@ pub fn map_expr_test() {
 }
 
 pub fn function_call_test() {
-  let expr =
-    hcl.FunctionCall("file", [hcl.StringLiteral("config.json")], False)
+  let expr = hcl.FunctionCall("file", [hcl.StringLiteral("config.json")], False)
   case expr {
     hcl.FunctionCall(name, args, expand) -> {
       name |> should.equal("file")
@@ -165,9 +166,10 @@ pub fn block_with_attrs_test() {
 }
 
 pub fn nested_block_test() {
-  let inner = hcl.simple_block("ebs_block_device", [
-    #("device_name", hcl.StringLiteral("/dev/sda1")),
-  ])
+  let inner =
+    hcl.simple_block("ebs_block_device", [
+      #("device_name", hcl.StringLiteral("/dev/sda1")),
+    ])
   let outer =
     hcl.Block(
       type_: "resource",

@@ -338,8 +338,7 @@ pub fn ref(path: String) -> Expr {
   case string.split(path, ".") {
     [] -> Identifier("")
     [single] -> Identifier(single)
-    [first, ..rest] -> list.fold(rest, Identifier(first), fn(acc, part) {
-      GetAttr(acc, part)
-    })
+    [first, ..rest] ->
+      list.fold(rest, Identifier(first), fn(acc, part) { GetAttr(acc, part) })
   }
 }
