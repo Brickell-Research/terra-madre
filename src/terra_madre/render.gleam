@@ -358,9 +358,10 @@ fn render_block_indented(block: Block, indent: Int) -> String {
   }
   let header = indent_str <> type_ <> labels_str <> " {\n"
 
-  // Attributes
+  // Attributes (sorted for deterministic output)
   let attr_lines =
     dict.to_list(attrs)
+    |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
     |> list.map(fn(pair) {
       let #(key, value) = pair
       inner_indent <> key <> " = " <> render_expr(value)
