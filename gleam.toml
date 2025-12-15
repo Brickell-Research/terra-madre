@@ -1,5 +1,5 @@
 name = "terra_madre"
-version = "0.0.3"
+version = "0.0.4"
 licence = "MIT"
 description = "A Gleam library"
 licences = ["MIT"]
