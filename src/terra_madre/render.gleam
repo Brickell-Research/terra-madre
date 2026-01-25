@@ -23,7 +23,15 @@ import terra_madre/terraform.{
 // ============================================================================
 
 /// Render an expression to HCL text.
+/// Note: For inline rendering (no multi-line formatting), use this function.
+/// For rendering within blocks where lists/maps should be multi-line, use render_expr_indented.
 pub fn render_expr(expr: Expr) -> String {
+  render_expr_inline(expr)
+}
+
+/// Render an expression with indentation support for multi-line lists and maps.
+/// The indent parameter specifies the current indentation level (number of 2-space indents).
+pub fn render_expr_indented(expr: Expr, indent: Int) -> String {
   case expr {
     hcl.StringLiteral(s) -> render_string(s)
     hcl.IntLiteral(n) -> int.to_string(n)
@@ -35,11 +43,46 @@ pub fn render_expr(expr: Expr) -> String {
       }
     hcl.NullLiteral -> "null"
     hcl.Identifier(name) -> name
-    hcl.GetAttr(base, attr) -> render_expr(base) <> "." <> attr
+    hcl.GetAttr(base, attr) -> render_expr_indented(base, indent) <> "." <> attr
     hcl.Index(base, index) ->
-      render_expr(base) <> "[" <> render_expr(index) <> "]"
-    hcl.ListExpr(items) -> render_list(items)
-    hcl.MapExpr(pairs) -> render_map(pairs)
+      render_expr_indented(base, indent)
+      <> "["
+      <> render_expr_indented(index, indent)
+      <> "]"
+    hcl.ListExpr(items) -> render_list_indented(items, indent)
+    hcl.MapExpr(pairs) -> render_map_indented(pairs, indent)
+    hcl.TemplateExpr(parts) -> render_template(parts)
+    hcl.Heredoc(marker, indent_strip, content) ->
+      render_heredoc(marker, indent_strip, content)
+    hcl.FunctionCall(name, args, expand_final) ->
+      render_function_call(name, args, expand_final)
+    hcl.UnaryOp(op, operand) -> render_unary(op, operand)
+    hcl.BinaryOp(left, op, right) -> render_binary(left, op, right)
+    hcl.Conditional(cond, true_expr, false_expr) ->
+      render_conditional(cond, true_expr, false_expr)
+    hcl.ForExpr(clause) -> render_for_expr(clause)
+    hcl.Splat(base, splat_type) -> render_splat(base, splat_type)
+  }
+}
+
+/// Internal: render expression inline (no multi-line formatting for lists/maps)
+fn render_expr_inline(expr: Expr) -> String {
+  case expr {
+    hcl.StringLiteral(s) -> render_string(s)
+    hcl.IntLiteral(n) -> int.to_string(n)
+    hcl.FloatLiteral(f) -> float.to_string(f)
+    hcl.BoolLiteral(b) ->
+      case b {
+        True -> "true"
+        False -> "false"
+      }
+    hcl.NullLiteral -> "null"
+    hcl.Identifier(name) -> name
+    hcl.GetAttr(base, attr) -> render_expr_inline(base) <> "." <> attr
+    hcl.Index(base, index) ->
+      render_expr_inline(base) <> "[" <> render_expr_inline(index) <> "]"
+    hcl.ListExpr(items) -> render_list_inline(items)
+    hcl.MapExpr(pairs) -> render_map_inline(pairs)
     hcl.TemplateExpr(parts) -> render_template(parts)
     hcl.Heredoc(marker, indent_strip, content) ->
       render_heredoc(marker, indent_strip, content)
@@ -67,17 +110,35 @@ fn escape_string(s: String) -> String {
   |> string.replace("\t", "\\t")
 }
 
-fn render_list(items: List(Expr)) -> String {
+/// Render a list inline (single line)
+fn render_list_inline(items: List(Expr)) -> String {
   case items {
     [] -> "[]"
     _ -> {
-      let rendered = list.map(items, render_expr)
+      let rendered = list.map(items, render_expr_inline)
       "[" <> string.join(rendered, ", ") <> "]"
     }
   }
 }
 
-fn render_map(pairs: List(#(MapKey, Expr))) -> String {
+/// Render a list with multi-line formatting (one item per line)
+fn render_list_indented(items: List(Expr), indent: Int) -> String {
+  case items {
+    [] -> "[]"
+    _ -> {
+      let inner_indent = string.repeat("  ", indent + 1)
+      let closing_indent = string.repeat("  ", indent)
+      let rendered =
+        list.map(items, fn(item) {
+          inner_indent <> render_expr_indented(item, indent + 1)
+        })
+      "[\n" <> string.join(rendered, ",\n") <> ",\n" <> closing_indent <> "]"
+    }
+  }
+}
+
+/// Render a map inline (single line)
+fn render_map_inline(pairs: List(#(MapKey, Expr))) -> String {
   case pairs {
     [] -> "{}"
     _ -> {
@@ -86,11 +147,32 @@ fn render_map(pairs: List(#(MapKey, Expr))) -> String {
           let #(key, value) = pair
           let key_str = case key {
             hcl.IdentKey(name) -> name
-            hcl.ExprKey(expr) -> "(" <> render_expr(expr) <> ")"
+            hcl.ExprKey(expr) -> "(" <> render_expr_inline(expr) <> ")"
           }
-          key_str <> " = " <> render_expr(value)
+          key_str <> " = " <> render_expr_inline(value)
         })
       "{ " <> string.join(rendered, ", ") <> " }"
+    }
+  }
+}
+
+/// Render a map with multi-line formatting (one key-value pair per line)
+fn render_map_indented(pairs: List(#(MapKey, Expr)), indent: Int) -> String {
+  case pairs {
+    [] -> "{}"
+    _ -> {
+      let inner_indent = string.repeat("  ", indent + 1)
+      let closing_indent = string.repeat("  ", indent)
+      let rendered =
+        list.map(pairs, fn(pair) {
+          let #(key, value) = pair
+          let key_str = case key {
+            hcl.IdentKey(name) -> name
+            hcl.ExprKey(expr) -> "(" <> render_expr_indented(expr, indent + 1) <> ")"
+          }
+          inner_indent <> key_str <> " = " <> render_expr_indented(value, indent + 1)
+        })
+      "{\n" <> string.join(rendered, "\n") <> "\n" <> closing_indent <> "}"
     }
   }
 }
@@ -364,7 +446,7 @@ fn render_block_indented(block: Block, indent: Int) -> String {
     |> list.sort(fn(a, b) { string.compare(a.0, b.0) })
     |> list.map(fn(pair) {
       let #(key, value) = pair
-      inner_indent <> key <> " = " <> render_expr(value)
+      inner_indent <> key <> " = " <> render_expr_indented(value, indent + 1)
     })
 
   // Nested blocks

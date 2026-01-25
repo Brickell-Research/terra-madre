@@ -784,3 +784,155 @@ pub fn render_resource_with_count_test() {
   let rendered = render.render_config(config)
   rendered |> string.contains("count = 3") |> should.be_true()
 }
+
+// ============================================================================
+// Multi-line Formatting Tests
+// ============================================================================
+
+pub fn render_expr_indented_list_test() {
+  let expr =
+    hcl.ListExpr([
+      hcl.StringLiteral("item1"),
+      hcl.StringLiteral("item2"),
+      hcl.StringLiteral("item3"),
+    ])
+  render.render_expr_indented(expr, 0)
+  |> should.equal(
+    "[\n  \"item1\",\n  \"item2\",\n  \"item3\",\n]",
+  )
+}
+
+pub fn render_expr_indented_list_nested_indent_test() {
+  let expr =
+    hcl.ListExpr([
+      hcl.StringLiteral("a"),
+      hcl.StringLiteral("b"),
+    ])
+  render.render_expr_indented(expr, 1)
+  |> should.equal(
+    "[\n    \"a\",\n    \"b\",\n  ]",
+  )
+}
+
+pub fn render_expr_indented_map_test() {
+  let expr =
+    hcl.MapExpr([
+      #(hcl.IdentKey("source"), hcl.StringLiteral("hashicorp/aws")),
+      #(hcl.IdentKey("version"), hcl.StringLiteral("~> 5.0")),
+    ])
+  render.render_expr_indented(expr, 0)
+  |> should.equal(
+    "{\n  source = \"hashicorp/aws\"\n  version = \"~> 5.0\"\n}",
+  )
+}
+
+pub fn render_expr_indented_map_nested_indent_test() {
+  let expr =
+    hcl.MapExpr([
+      #(hcl.IdentKey("key"), hcl.StringLiteral("value")),
+    ])
+  render.render_expr_indented(expr, 1)
+  |> should.equal(
+    "{\n    key = \"value\"\n  }",
+  )
+}
+
+pub fn render_expr_indented_empty_list_test() {
+  render.render_expr_indented(hcl.ListExpr([]), 0)
+  |> should.equal("[]")
+}
+
+pub fn render_expr_indented_empty_map_test() {
+  render.render_expr_indented(hcl.MapExpr([]), 0)
+  |> should.equal("{}")
+}
+
+pub fn render_block_with_list_attribute_test() {
+  let block =
+    hcl.Block(
+      type_: "resource",
+      labels: ["aws_security_group", "example"],
+      attributes: dict.from_list([
+        #(
+          "tags",
+          hcl.ListExpr([
+            hcl.StringLiteral("tag1"),
+            hcl.StringLiteral("tag2"),
+            hcl.StringLiteral("tag3"),
+          ]),
+        ),
+      ]),
+      blocks: [],
+    )
+  let rendered = render.render_block(block)
+  // Verify multi-line list formatting
+  rendered |> string.contains("tags = [\n") |> should.be_true()
+  rendered |> string.contains("    \"tag1\",\n") |> should.be_true()
+  rendered |> string.contains("    \"tag2\",\n") |> should.be_true()
+  rendered |> string.contains("    \"tag3\",\n") |> should.be_true()
+  rendered |> string.contains("  ]") |> should.be_true()
+}
+
+pub fn render_block_with_map_attribute_test() {
+  let block =
+    hcl.Block(
+      type_: "terraform",
+      labels: [],
+      attributes: dict.from_list([
+        #(
+          "provider_config",
+          hcl.MapExpr([
+            #(hcl.IdentKey("source"), hcl.StringLiteral("DataDog/datadog")),
+            #(hcl.IdentKey("version"), hcl.StringLiteral("~> 3.0")),
+          ]),
+        ),
+      ]),
+      blocks: [],
+    )
+  let rendered = render.render_block(block)
+  // Verify multi-line map formatting
+  rendered |> string.contains("provider_config = {\n") |> should.be_true()
+  rendered |> string.contains("    source = \"DataDog/datadog\"\n") |> should.be_true()
+  rendered |> string.contains("    version = \"~> 3.0\"\n") |> should.be_true()
+  rendered |> string.contains("  }") |> should.be_true()
+}
+
+pub fn render_expr_indented_nested_list_test() {
+  let expr =
+    hcl.ListExpr([
+      hcl.ListExpr([
+        hcl.StringLiteral("inner1"),
+        hcl.StringLiteral("inner2"),
+      ]),
+      hcl.StringLiteral("outer"),
+    ])
+  let rendered = render.render_expr_indented(expr, 0)
+  // Verify nested list formatting
+  rendered |> string.contains("[\n") |> should.be_true()
+  rendered |> string.contains("  [\n") |> should.be_true()
+  rendered |> string.contains("    \"inner1\",\n") |> should.be_true()
+  rendered |> string.contains("    \"inner2\",\n") |> should.be_true()
+  rendered |> string.contains("  ],\n") |> should.be_true()
+  rendered |> string.contains("  \"outer\",\n") |> should.be_true()
+}
+
+pub fn render_expr_indented_map_with_list_value_test() {
+  let expr =
+    hcl.MapExpr([
+      #(
+        hcl.IdentKey("items"),
+        hcl.ListExpr([
+          hcl.StringLiteral("a"),
+          hcl.StringLiteral("b"),
+        ]),
+      ),
+    ])
+  let rendered = render.render_expr_indented(expr, 0)
+  // Verify map with nested list formatting
+  rendered |> string.contains("{\n") |> should.be_true()
+  rendered |> string.contains("  items = [\n") |> should.be_true()
+  rendered |> string.contains("    \"a\",\n") |> should.be_true()
+  rendered |> string.contains("    \"b\",\n") |> should.be_true()
+  rendered |> string.contains("  ]\n") |> should.be_true()
+  rendered |> string.contains("}") |> should.be_true()
+}
