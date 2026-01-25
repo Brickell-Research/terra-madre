@@ -5,6 +5,7 @@
 //// ## Modules
 //// - `terra_madre/hcl` - Core HCL types (expressions, blocks, meta-arguments)
 //// - `terra_madre/terraform` - Terraform-specific blocks (resource, provider, etc.)
+//// - `terra_madre/render` - Render Terraform types to HCL strings
 ////
 //// ## References
 //// - [HCL Native Syntax Specification](https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md)
@@ -30,3 +31,68 @@
 //// let ip_ref = hcl.ref("aws_instance.web.public_ip")
 //// ```
 
+// Re-export core HCL types
+pub type Expr =
+  hcl.Expr
+
+pub type Block =
+  hcl.Block
+
+pub type MetaArguments =
+  hcl.MetaArguments
+
+pub type Lifecycle =
+  hcl.Lifecycle
+
+// Re-export Terraform types
+pub type Config =
+  terraform.Config
+
+pub type Resource =
+  terraform.Resource
+
+pub type Provider =
+  terraform.Provider
+
+pub type DataSource =
+  terraform.DataSource
+
+pub type Variable =
+  terraform.Variable
+
+pub type Output =
+  terraform.Output
+
+pub type Module =
+  terraform.Module
+
+pub type Locals =
+  terraform.Locals
+
+// Re-export commonly used helpers
+import terra_madre/hcl
+import terra_madre/terraform
+
+/// Build a reference chain from dot-notation.
+/// Shorthand for `hcl.ref`.
+pub fn ref(path: String) -> Expr {
+  hcl.ref(path)
+}
+
+/// Create empty meta-arguments.
+/// Shorthand for `hcl.empty_meta`.
+pub fn empty_meta() -> MetaArguments {
+  hcl.empty_meta()
+}
+
+/// Create empty lifecycle configuration.
+/// Shorthand for `hcl.empty_lifecycle`.
+pub fn empty_lifecycle() -> Lifecycle {
+  hcl.empty_lifecycle()
+}
+
+/// Create an empty Terraform configuration.
+/// Shorthand for `terraform.empty_config`.
+pub fn empty_config() -> Config {
+  terraform.empty_config()
+}
